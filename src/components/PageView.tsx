@@ -1,4 +1,10 @@
-import { useRef, useState, useEffect, useCallback, type ReactNode } from "react";
+import {
+  useRef,
+  useState,
+  useEffect,
+  useCallback,
+  type ReactNode,
+} from "react";
 
 const PAGE_WIDTH = 816;
 const HEADER_HEIGHT = 48;
@@ -6,7 +12,7 @@ const FOOTER_HEIGHT = 48;
 const GAP_HEIGHT = 40;
 const PAGE_CONTENT_HEIGHT = 1056 - HEADER_HEIGHT - FOOTER_HEIGHT;
 const PAGE_HORIZONTAL_PADDING = 96;
-const OVERLAY_HEIGHT = HEADER_HEIGHT + FOOTER_HEIGHT + GAP_HEIGHT;
+const BASE_OVERLAY_HEIGHT = HEADER_HEIGHT + FOOTER_HEIGHT + GAP_HEIGHT;
 
 const PAGE_SHADOW = "0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.08)";
 
@@ -18,14 +24,20 @@ const pageNumberStyle = {
 
 interface PageViewProps {
   children: ReactNode;
+  documentHeaderSlot?: ReactNode;
+  documentHeaderHtml?: string;
+  isDocumentHeaderVisible?: boolean;
 }
 
 /**
- * Finds the .tiptap element inside the content ref and adds margin-bottom
+ * Finds the .tiptap element inside the content ref and adds margin-top
  * to block elements that would straddle a page boundary, pushing them to
  * the next page. Returns the total number of pages.
  */
-function adjustBlockMarginsForPageBreaks(contentElement: HTMLElement): number {
+function adjustBlockMarginsForPageBreaks(
+  contentElement: HTMLElement,
+  overlayHeight: number
+): number {
   const tiptapElement = contentElement.querySelector(".tiptap");
   if (!tiptapElement) return 1;
 
@@ -47,17 +59,17 @@ function adjustBlockMarginsForPageBreaks(contentElement: HTMLElement): number {
     const blockTop = blockRect.top - contentTop;
     const blockBottom = blockRect.bottom - contentTop;
 
-    // Account for margins already added (each previous page break adds OVERLAY_HEIGHT)
+    // Account for margins already added (each previous page break adds overlayHeight)
     const previousBreaks = currentPage - 1;
-    const adjustedTop = blockTop - previousBreaks * OVERLAY_HEIGHT;
-    const adjustedBottom = blockBottom - previousBreaks * OVERLAY_HEIGHT;
+    const adjustedTop = blockTop - previousBreaks * overlayHeight;
+    const adjustedBottom = blockBottom - previousBreaks * overlayHeight;
 
     const pageBoundary = currentPage * PAGE_CONTENT_HEIGHT;
 
     // If this block crosses a page boundary
     if (adjustedTop < pageBoundary && adjustedBottom > pageBoundary) {
       // Add margin to push it to the next page's content area
-      const spaceNeeded = pageBoundary - adjustedTop + OVERLAY_HEIGHT;
+      const spaceNeeded = pageBoundary - adjustedTop + overlayHeight;
       block.style.marginTop = `${spaceNeeded}px`;
       block.dataset.pageMargin = "true";
       currentPage++;
@@ -70,14 +82,43 @@ function adjustBlockMarginsForPageBreaks(contentElement: HTMLElement): number {
   // Calculate total pages from the final content height
   const finalHeight = tiptapElement.getBoundingClientRect().height;
   const totalBreaks = currentPage - 1;
-  const adjustedHeight = finalHeight - totalBreaks * OVERLAY_HEIGHT;
+  const adjustedHeight = finalHeight - totalBreaks * overlayHeight;
   return Math.max(1, Math.ceil(adjustedHeight / PAGE_CONTENT_HEIGHT));
 }
 
-function PageView({ children }: PageViewProps) {
+function PageView({
+  children,
+  documentHeaderSlot,
+  documentHeaderHtml,
+  isDocumentHeaderVisible = false,
+}: PageViewProps) {
   const contentRef = useRef<HTMLDivElement>(null);
+  const headerMeasureRef = useRef<HTMLDivElement>(null);
   const [totalPages, setTotalPages] = useState(1);
+  const [documentHeaderRenderedHeight, setDocumentHeaderRenderedHeight] =
+    useState(0);
   const isAdjustingRef = useRef(false);
+
+  const showHeader = isDocumentHeaderVisible && !!documentHeaderSlot;
+  const headerHeight = showHeader ? documentHeaderRenderedHeight : 0;
+  const effectiveOverlayHeight = BASE_OVERLAY_HEIGHT + headerHeight;
+
+  // Measure document header height
+  useEffect(() => {
+    const element = headerMeasureRef.current;
+    if (!element || !showHeader) {
+      setDocumentHeaderRenderedHeight(0);
+      return;
+    }
+    const measureHeight = () => {
+      const height = element.getBoundingClientRect().height;
+      setDocumentHeaderRenderedHeight(height);
+    };
+    measureHeight();
+    const observer = new ResizeObserver(measureHeight);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [showHeader]);
 
   const recalculatePages = useCallback(() => {
     if (isAdjustingRef.current) return;
@@ -85,12 +126,15 @@ function PageView({ children }: PageViewProps) {
     if (!element) return;
 
     isAdjustingRef.current = true;
-    const pages = adjustBlockMarginsForPageBreaks(element);
+    const pages = adjustBlockMarginsForPageBreaks(
+      element,
+      effectiveOverlayHeight
+    );
     if (pages !== totalPages) {
       setTotalPages(pages);
     }
     isAdjustingRef.current = false;
-  }, [totalPages]);
+  }, [totalPages, effectiveOverlayHeight]);
 
   useEffect(() => {
     const element = contentRef.current;
@@ -108,11 +152,13 @@ function PageView({ children }: PageViewProps) {
     return () => observer.disconnect();
   }, [recalculatePages]);
 
+  // Recalculate when header height changes
+  useEffect(() => {
+    recalculatePages();
+  }, [headerHeight, recalculatePages]);
+
   return (
-    <div
-      className="relative mt-4"
-      style={{ width: PAGE_WIDTH }}
-    >
+    <div className="relative mt-4" style={{ width: PAGE_WIDTH }}>
       {/* First page header */}
       <div
         className="bg-white"
@@ -124,6 +170,25 @@ function PageView({ children }: PageViewProps) {
           clipPath: "inset(-10px -10px 0 -10px)",
         }}
       />
+
+      {/* Document header (editable, first page) */}
+      {showHeader && (
+        <div
+          ref={headerMeasureRef}
+          className="bg-white"
+          style={{
+            paddingLeft: PAGE_HORIZONTAL_PADDING,
+            paddingRight: PAGE_HORIZONTAL_PADDING,
+            boxShadow: PAGE_SHADOW,
+            clipPath: "inset(0 -10px)",
+          }}
+        >
+          <div className="document-header bg-[#f8f9fc] rounded-sm px-3 py-2">
+            {documentHeaderSlot}
+          </div>
+          <div className="border-b border-gray-300 mt-2" />
+        </div>
+      )}
 
       {/* Content area */}
       <div
@@ -160,11 +225,12 @@ function PageView({ children }: PageViewProps) {
       {/* Page gap overlays at each boundary */}
       {Array.from({ length: totalPages - 1 }, (_, index) => {
         const pageNumber = index + 1;
-        // Each overlay sits at: header + N page-content-heights + previous overlays
+        // Each overlay sits at: first page header + document header + N page-content-heights + previous overlays
         const topPosition =
           HEADER_HEIGHT +
+          headerHeight +
           PAGE_CONTENT_HEIGHT * pageNumber +
-          index * OVERLAY_HEIGHT;
+          index * effectiveOverlayHeight;
 
         return (
           <div
@@ -190,10 +256,7 @@ function PageView({ children }: PageViewProps) {
             </div>
 
             {/* Gap between pages */}
-            <div
-              className="bg-[#F8F9FA]"
-              style={{ height: GAP_HEIGHT }}
-            />
+            <div className="bg-[#F8F9FA]" style={{ height: GAP_HEIGHT }} />
 
             {/* Header of next page */}
             <div
@@ -206,6 +269,27 @@ function PageView({ children }: PageViewProps) {
                 borderTopRightRadius: 4,
               }}
             />
+
+            {/* Document header (read-only copy for subsequent pages) */}
+            {showHeader && documentHeaderHtml && (
+              <div
+                className="bg-white"
+                style={{
+                  paddingLeft: PAGE_HORIZONTAL_PADDING,
+                  paddingRight: PAGE_HORIZONTAL_PADDING,
+                  boxShadow: PAGE_SHADOW,
+                  clipPath: "inset(0 -10px)",
+                }}
+              >
+                <div className="document-header bg-[#f8f9fc] rounded-sm px-3 py-2">
+                  <div
+                    className="tiptap"
+                    dangerouslySetInnerHTML={{ __html: documentHeaderHtml }}
+                  />
+                </div>
+                <div className="border-b border-gray-300 mt-2" />
+              </div>
+            )}
           </div>
         );
       })}
