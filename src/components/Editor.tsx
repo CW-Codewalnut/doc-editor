@@ -94,9 +94,9 @@ function Editor() {
       )}
       <PageView
         documentHeaderSlot={
-          headerEditor ? (
+          headerEditor && (
             <EditorContent editor={headerEditor} className="header-editor" />
-          ) : null
+          )
         }
         documentHeaderHtml={headerHtml}
         isDocumentHeaderVisible={isHeaderVisible}
