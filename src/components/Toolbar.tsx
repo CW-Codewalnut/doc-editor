@@ -175,6 +175,8 @@ function Toolbar({ editor, isHeaderVisible, onToggleHeader, onExportPdf }: Toolb
     [editor, setFontSize]
   );
 
+  const headingDropdownClass = `flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-100 text-sm cursor-pointer transition-colors ${hasHeading ? "text-gray-700" : "opacity-40 cursor-not-allowed"}`;
+
   return (
     <>
       {/* Backdrop overlay to close popovers when clicking outside */}
@@ -216,7 +218,7 @@ function Toolbar({ editor, isHeaderVisible, onToggleHeader, onExportPdf }: Toolb
               event.preventDefault();
               if (hasHeading) togglePopover("heading");
             }}
-            className={`flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-100 text-sm cursor-pointer transition-colors ${!hasHeading ? "opacity-40 cursor-not-allowed" : "text-gray-700"}`}
+            className={headingDropdownClass}
             style={{ minWidth: 110 }}
           >
             <span className="truncate">{currentHeadingLabel}</span>
