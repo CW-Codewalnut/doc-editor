@@ -23,6 +23,7 @@ import {
   ImageIcon,
   MinusIcon,
   PanelTop,
+  FileDown,
 } from "lucide-react";
 import ColorPicker from "./ColorPicker";
 import LinkPopover from "./LinkPopover";
@@ -60,6 +61,7 @@ interface ToolbarProps {
   editor: Editor;
   isHeaderVisible: boolean;
   onToggleHeader: () => void;
+  onExportPdf: () => void;
 }
 
 function ToolbarButton({
@@ -97,7 +99,7 @@ function ToolbarDivider() {
   return <div className="w-px h-6 bg-gray-300 mx-1" />;
 }
 
-function Toolbar({ editor, isHeaderVisible, onToggleHeader }: ToolbarProps) {
+function Toolbar({ editor, isHeaderVisible, onToggleHeader, onExportPdf }: ToolbarProps) {
   const [activePopover, setActivePopover] = useState<PopoverName>(null);
 
   // Check which node types are available in the active editor's schema
@@ -545,6 +547,13 @@ function Toolbar({ editor, isHeaderVisible, onToggleHeader }: ToolbarProps) {
           isActive={isHeaderVisible}
         >
           <PanelTop size={18} />
+        </ToolbarButton>
+
+        <ToolbarDivider />
+
+        {/* Export to PDF */}
+        <ToolbarButton title="Export to PDF" onClick={onExportPdf}>
+          <FileDown size={18} />
         </ToolbarButton>
       </div>
     </>

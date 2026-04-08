@@ -15,6 +15,7 @@ import Underline from "@tiptap/extension-underline";
 import Image from "@tiptap/extension-image";
 import Toolbar from "./Toolbar";
 import PageView from "./PageView";
+import { exportToPdf } from "../utils/exportToPdf";
 
 function Editor() {
   const [isHeaderVisible, setIsHeaderVisible] = useState(false);
@@ -73,6 +74,15 @@ function Editor() {
   const activeEditor =
     activeEditorType === "header" && headerEditor ? headerEditor : bodyEditor;
 
+  const handleExportPdf = useCallback(() => {
+    if (!bodyEditor) return;
+    exportToPdf({
+      bodyHtml: bodyEditor.getHTML(),
+      headerHtml,
+      showHeader: isHeaderVisible,
+    });
+  }, [bodyEditor, headerHtml, isHeaderVisible]);
+
   const toggleHeader = useCallback(() => {
     setIsHeaderVisible((previous) => {
       if (previous && activeEditorType === "header") {
@@ -90,6 +100,7 @@ function Editor() {
           editor={activeEditor}
           isHeaderVisible={isHeaderVisible}
           onToggleHeader={toggleHeader}
+          onExportPdf={handleExportPdf}
         />
       )}
       <PageView
