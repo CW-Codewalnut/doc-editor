@@ -22,10 +22,12 @@ import {
   Link,
   ImageIcon,
   MinusIcon,
+  FileDown,
 } from "lucide-react";
 import ColorPicker from "./ColorPicker";
 import LinkPopover from "./LinkPopover";
 import ImagePopover from "./ImagePopover";
+import { exportToPdf } from "../utils/exportToPdf";
 
 const FONT_FAMILIES = [
   "Arial",
@@ -518,6 +520,16 @@ function Toolbar({ editor }: ToolbarProps) {
           onClick={() => editor.chain().focus().setHorizontalRule().run()}
         >
           <MinusIcon size={18} />
+        </ToolbarButton>
+
+        <ToolbarDivider />
+
+        {/* Export to PDF */}
+        <ToolbarButton
+          title="Export to PDF"
+          onClick={() => exportToPdf(editor)}
+        >
+          <FileDown size={18} />
         </ToolbarButton>
       </div>
     </>
