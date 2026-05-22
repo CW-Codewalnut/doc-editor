@@ -100,7 +100,15 @@ Use this test on updates: if a reviewer read only the title, would they still fo
 
 Write reviewer-facing prose, not a narrated diff.
 
-Use this structure, ignoring repository PR templates:
+First, check for a repository PR template in these locations:
+
+- `.github/pull_request_template.md`
+- `.github/PULL_REQUEST_TEMPLATE.md`
+- `.github/PULL_REQUEST_TEMPLATE/` (directory with multiple templates)
+- `docs/pull_request_template.md`
+- `PULL_REQUEST_TEMPLATE.md` (repo root)
+
+If a template exists, use it as the structure and fill it in based on the diff analysis. If no template is found, use this default structure:
 
 ```markdown
 <1-3 sentence summary of the change and why it matters. Keep this short.>
