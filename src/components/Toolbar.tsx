@@ -22,6 +22,7 @@ import {
   Link,
   ImageIcon,
   MinusIcon,
+  PanelTop,
 } from "lucide-react";
 import ColorPicker from "./ColorPicker";
 import LinkPopover from "./LinkPopover";
@@ -57,6 +58,8 @@ type PopoverName =
 
 interface ToolbarProps {
   editor: Editor;
+  isHeaderVisible: boolean;
+  onToggleHeader: () => void;
 }
 
 function ToolbarButton({
@@ -94,8 +97,16 @@ function ToolbarDivider() {
   return <div className="w-px h-6 bg-gray-300 mx-1" />;
 }
 
-function Toolbar({ editor }: ToolbarProps) {
+function Toolbar({ editor, isHeaderVisible, onToggleHeader }: ToolbarProps) {
   const [activePopover, setActivePopover] = useState<PopoverName>(null);
+
+  // Check which node types are available in the active editor's schema
+  const hasHeading = !!editor.schema.nodes.heading;
+  const hasListItem = !!editor.schema.nodes.listItem;
+  const hasBulletList = !!editor.schema.nodes.bulletList;
+  const hasOrderedList = !!editor.schema.nodes.orderedList;
+  const hasHorizontalRule = !!editor.schema.nodes.horizontalRule;
+  const hasImage = !!editor.schema.nodes.image;
 
   const togglePopover = useCallback(
     (name: PopoverName) => {
@@ -198,17 +209,18 @@ function Toolbar({ editor }: ToolbarProps) {
         <div className="relative">
           <button
             type="button"
+            disabled={!hasHeading}
             onMouseDown={(event) => {
               event.preventDefault();
-              togglePopover("heading");
+              if (hasHeading) togglePopover("heading");
             }}
-            className="flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-100 text-sm text-gray-700 cursor-pointer transition-colors"
+            className={`flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-100 text-sm cursor-pointer transition-colors ${!hasHeading ? "opacity-40 cursor-not-allowed" : "text-gray-700"}`}
             style={{ minWidth: 110 }}
           >
             <span className="truncate">{currentHeadingLabel}</span>
             <ChevronDown size={14} />
           </button>
-          {activePopover === "heading" && (
+          {activePopover === "heading" && hasHeading && (
             <div
               className="absolute top-full left-0 mt-1 z-50 bg-white border border-gray-200 rounded-lg shadow-lg py-1"
               style={{ minWidth: 160 }}
@@ -449,14 +461,16 @@ function Toolbar({ editor }: ToolbarProps) {
         <ToolbarButton
           title="Bulleted list"
           onClick={() => editor.chain().focus().toggleBulletList().run()}
-          isActive={editor.isActive("bulletList")}
+          isActive={hasBulletList && editor.isActive("bulletList")}
+          disabled={!hasBulletList}
         >
           <List size={18} />
         </ToolbarButton>
         <ToolbarButton
           title="Numbered list"
           onClick={() => editor.chain().focus().toggleOrderedList().run()}
-          isActive={editor.isActive("orderedList")}
+          isActive={hasOrderedList && editor.isActive("orderedList")}
+          disabled={!hasOrderedList}
         >
           <ListOrdered size={18} />
         </ToolbarButton>
@@ -465,14 +479,14 @@ function Toolbar({ editor }: ToolbarProps) {
         <ToolbarButton
           title="Decrease indent"
           onClick={() => editor.chain().focus().liftListItem("listItem").run()}
-          disabled={!editor.can().liftListItem("listItem")}
+          disabled={!hasListItem || !editor.can().liftListItem("listItem")}
         >
           <Outdent size={18} />
         </ToolbarButton>
         <ToolbarButton
           title="Increase indent"
           onClick={() => editor.chain().focus().sinkListItem("listItem").run()}
-          disabled={!editor.can().sinkListItem("listItem")}
+          disabled={!hasListItem || !editor.can().sinkListItem("listItem")}
         >
           <Indent size={18} />
         </ToolbarButton>
@@ -501,10 +515,11 @@ function Toolbar({ editor }: ToolbarProps) {
           <ToolbarButton
             title="Insert image"
             onClick={() => togglePopover("image")}
+            disabled={!hasImage}
           >
             <ImageIcon size={18} />
           </ToolbarButton>
-          {activePopover === "image" && (
+          {activePopover === "image" && hasImage && (
             <ImagePopover
               editor={editor}
               onClose={closePopover}
@@ -516,8 +531,20 @@ function Toolbar({ editor }: ToolbarProps) {
         <ToolbarButton
           title="Horizontal rule"
           onClick={() => editor.chain().focus().setHorizontalRule().run()}
+          disabled={!hasHorizontalRule}
         >
           <MinusIcon size={18} />
+        </ToolbarButton>
+
+        <ToolbarDivider />
+
+        {/* Toggle Document Header */}
+        <ToolbarButton
+          title={isHeaderVisible ? "Hide header" : "Show header"}
+          onClick={onToggleHeader}
+          isActive={isHeaderVisible}
+        >
+          <PanelTop size={18} />
         </ToolbarButton>
       </div>
     </>

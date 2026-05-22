@@ -60,3 +60,20 @@
 html {
   margin: 0px;
 }
+
+/* Document header editor styles */
+.document-header .tiptap {
+  outline: none;
+  font-family: Arial, sans-serif;
+  font-size: 9pt;
+  line-height: 1.4;
+  color: #555;
+}
+
+.document-header .tiptap p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: #adb5bd;
+  pointer-events: none;
+  height: 0;
+}
