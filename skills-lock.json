@@ -6,10 +6,11 @@
       "sourceType": "github",
       "computedHash": "e24e3c4cab4b5a07bc1d1801db14868f3a1cd184f7f28f5dd2c4a2b234bf2f2d"
     },
-    "pr-document-writer": {
-      "source": "cw-codewalnut/agent-skills",
+    "pr-writer": {
+      "source": "getsentry/skills",
       "sourceType": "github",
-      "computedHash": "76e34d536be854a3b65aaab1624006fc515e7852ef8ce10e95908f805f4cb9f4"
+      "skillPath": "skills/pr-writer/SKILL.md",
+      "computedHash": "77e7a08f75a2a16058fe1dacf4e5e4b294108deaf8c5b0d645d4042bb025d694"
     }
   }
 }
