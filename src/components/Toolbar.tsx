@@ -524,11 +524,9 @@ function Toolbar({ editor }: ToolbarProps) {
 
         <ToolbarDivider />
 
-        {/* Export to PDF */}
-        <ToolbarButton
-          title="Export to PDF"
-          onClick={() => exportToPdf(editor)}
-        >
+        {/* Export as PDF */}
+        <ToolbarButton title="Export as PDF" onClick={() => exportToPdf()}>
+
           <FileDown size={18} />
         </ToolbarButton>
       </div>
