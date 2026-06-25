@@ -2,10 +2,15 @@
 
 .tiptap {
   outline: none;
+  display: flow-root;
   font-family: Arial, sans-serif;
   font-size: 11pt;
   line-height: 1.5;
   color: #000;
+}
+
+.tiptap > :first-child {
+  margin-top: 0;
 }
 
 .tiptap p.is-editor-empty:first-child::before {
@@ -14,6 +19,32 @@
   color: #adb5bd;
   pointer-events: none;
   height: 0;
+}
+
+.tiptap h1,
+.tiptap h2,
+.tiptap h3,
+.tiptap h4 {
+  color: #202124;
+  font-weight: 700;
+  line-height: 1.25;
+  margin: 0.85em 0 0.35em;
+}
+
+.tiptap h1 {
+  font-size: 22pt;
+}
+
+.tiptap h2 {
+  font-size: 18pt;
+}
+
+.tiptap h3 {
+  font-size: 15pt;
+}
+
+.tiptap h4 {
+  font-size: 13pt;
 }
 
 .tiptap ul {

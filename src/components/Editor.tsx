@@ -4,8 +4,6 @@ import Placeholder from "@tiptap/extension-placeholder";
 import { TextStyle, FontFamily, FontSize, Color } from "@tiptap/extension-text-style";
 import Highlight from "@tiptap/extension-highlight";
 import TextAlign from "@tiptap/extension-text-align";
-import Link from "@tiptap/extension-link";
-import Underline from "@tiptap/extension-underline";
 import Image from "@tiptap/extension-image";
 import Toolbar from "./Toolbar";
 import PageView from "./PageView";
@@ -15,16 +13,15 @@ function Editor() {
     extensions: [
       StarterKit.configure({
         heading: { levels: [1, 2, 3, 4] },
+        link: { openOnClick: false },
       }),
-      Link.configure({ openOnClick: false }),
-      Underline,
       TextStyle,
       FontFamily,
       FontSize,
       Color,
       Highlight.configure({ multicolor: true }),
       TextAlign.configure({ types: ["heading", "paragraph"] }),
-      Image.configure({ inline: true }),
+      Image.configure({ inline: true, allowBase64: true }),
       Placeholder.configure({ placeholder: "Start typing..." }),
     ],
     autofocus: true,
