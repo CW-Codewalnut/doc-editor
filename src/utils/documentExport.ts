@@ -93,17 +93,25 @@ export async function exportToPdf(editor: Editor): Promise<void> {
 
   const baseName = getDocumentBaseName(editor);
 
-  // Off-screen render root; inherits .tiptap content styling from the global
-  // stylesheet. Kept out of the visual flow and always removed afterwards.
+  // The wrapper carries the off-screen positioning. html2pdf deep-clones the
+  // node it is given (renderRoot) into its own on-screen capture container, so
+  // any off-screen styles on that node would move the clone out of view and
+  // render blank pages. Keeping positioning on the wrapper avoids that while
+  // still hiding the render root from the user.
+  const offscreenWrapper = document.createElement("div");
+  offscreenWrapper.style.position = "fixed";
+  offscreenWrapper.style.left = "-9999px";
+  offscreenWrapper.style.top = "0";
+
+  // Render root inherits .tiptap content styling from the global stylesheet.
   const renderRoot = document.createElement("div");
   renderRoot.className = "tiptap";
-  renderRoot.style.position = "fixed";
-  renderRoot.style.left = "-9999px";
-  renderRoot.style.top = "0";
   renderRoot.style.width = `${PDF_CONTENT_WIDTH}px`;
   renderRoot.style.background = PDF_BACKGROUND;
   renderRoot.innerHTML = editor.getHTML();
-  document.body.appendChild(renderRoot);
+
+  offscreenWrapper.appendChild(renderRoot);
+  document.body.appendChild(offscreenWrapper);
 
   try {
     // Use html2pdf's default page slicing (css + legacy). The `avoid-all` mode
@@ -125,7 +133,7 @@ export async function exportToPdf(editor: Editor): Promise<void> {
       .from(renderRoot)
       .save();
   } finally {
-    renderRoot.remove();
+    offscreenWrapper.remove();
   }
 }
 
