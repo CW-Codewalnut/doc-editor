@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import type { Editor } from "@tiptap/react";
+import { useEditorState, type Editor } from "@tiptap/react";
 import {
   Undo2,
   Redo2,
@@ -38,6 +38,12 @@ const FONT_FAMILIES = [
 
 const FONT_SIZES = [8, 9, 10, 11, 12, 14, 16, 18, 24, 36, 48, 72];
 
+const DEFAULT_FONT_FAMILY = "Arial";
+const DEFAULT_FONT_SIZE = 11;
+const DEFAULT_TEXT_COLOR = "#000000";
+const DEFAULT_HIGHLIGHT_COLOR = "#FFFF00";
+const DEFAULT_TEXT_ALIGN = "left";
+
 const HEADING_OPTIONS = [
   { label: "Normal text", level: 0 },
   { label: "Heading 1", level: 1 },
@@ -54,6 +60,9 @@ type PopoverName =
   | "link"
   | "image"
   | null;
+
+type HeadingLevel = 0 | 1 | 2 | 3 | 4;
+type NonParagraphHeadingLevel = Exclude<HeadingLevel, 0>;
 
 interface ToolbarProps {
   editor: Editor;
@@ -94,8 +103,123 @@ function ToolbarDivider() {
   return <div className="w-px h-6 bg-gray-300 mx-1" />;
 }
 
+function isHeadingLevel(level: unknown): level is NonParagraphHeadingLevel {
+  return (
+    typeof level === "number" &&
+    HEADING_OPTIONS.some((option) => option.level === level && level > 0)
+  );
+}
+
+function getActiveHeadingLevel(editor: Editor): HeadingLevel {
+  const { selection } = editor.state;
+
+  if (selection.empty) {
+    const parentNode = selection.$from.parent;
+    return parentNode.type.name === "heading" &&
+      isHeadingLevel(parentNode.attrs.level)
+      ? parentNode.attrs.level
+      : 0;
+  }
+
+  const selectedHeadingLevels = new Set<NonParagraphHeadingLevel>();
+  let hasNonEmptyNonHeadingBlock = false;
+
+  editor.state.doc.nodesBetween(selection.from, selection.to, (node) => {
+    if (!node.isTextblock) return;
+
+    if (node.type.name === "heading" && isHeadingLevel(node.attrs.level)) {
+      selectedHeadingLevels.add(node.attrs.level);
+      return;
+    }
+
+    if (node.textContent.trim()) {
+      hasNonEmptyNonHeadingBlock = true;
+    }
+  });
+
+  if (selectedHeadingLevels.size === 1 && !hasNonEmptyNonHeadingBlock) {
+    return Array.from(selectedHeadingLevels)[0];
+  }
+
+  return 0;
+}
+
+function parseFontSize(fontSize: string | undefined): number {
+  if (!fontSize) return DEFAULT_FONT_SIZE;
+
+  const parsedFontSize = parseInt(fontSize, 10);
+  return Number.isFinite(parsedFontSize) ? parsedFontSize : DEFAULT_FONT_SIZE;
+}
+
+function getCurrentTextAlign(editor: Editor): string {
+  const paragraphAlign = editor.getAttributes("paragraph").textAlign as
+    | string
+    | undefined;
+  const headingAlign = editor.getAttributes("heading").textAlign as
+    | string
+    | undefined;
+
+  return headingAlign || paragraphAlign || DEFAULT_TEXT_ALIGN;
+}
+
+function getAdjacentFontSize(currentFontSize: number, direction: "up" | "down") {
+  if (direction === "up") {
+    return (
+      FONT_SIZES.find((fontSize) => fontSize > currentFontSize) ??
+      FONT_SIZES[FONT_SIZES.length - 1]
+    );
+  }
+
+  for (let index = FONT_SIZES.length - 1; index >= 0; index--) {
+    if (FONT_SIZES[index] < currentFontSize) {
+      return FONT_SIZES[index];
+    }
+  }
+
+  return FONT_SIZES[0];
+}
+
 function Toolbar({ editor }: ToolbarProps) {
   const [activePopover, setActivePopover] = useState<PopoverName>(null);
+  const toolbarState = useEditorState({
+    editor,
+    selector: ({ editor: currentEditor }) => {
+      const activeHeadingLevel = getActiveHeadingLevel(currentEditor);
+      const textStyleAttributes = currentEditor.getAttributes("textStyle");
+      const currentTextAlign = getCurrentTextAlign(currentEditor);
+
+      return {
+        activeHeadingLevel,
+        currentFontFamily:
+          (textStyleAttributes.fontFamily as string | undefined) ||
+          DEFAULT_FONT_FAMILY,
+        currentFontSize: parseFontSize(
+          textStyleAttributes.fontSize as string | undefined
+        ),
+        currentTextColor:
+          (textStyleAttributes.color as string | undefined) ||
+          DEFAULT_TEXT_COLOR,
+        currentHighlightColor:
+          (currentEditor.getAttributes("highlight").color as
+            | string
+            | undefined) || DEFAULT_HIGHLIGHT_COLOR,
+        currentTextAlign,
+        isBoldActive: currentEditor.isActive("bold"),
+        isItalicActive: currentEditor.isActive("italic"),
+        isUnderlineActive: currentEditor.isActive("underline"),
+        isTextColorActive: Boolean(textStyleAttributes.color),
+        isHighlightActive: currentEditor.isActive("highlight"),
+        isBulletListActive: currentEditor.isActive("bulletList"),
+        isOrderedListActive: currentEditor.isActive("orderedList"),
+        isLinkActive: currentEditor.isActive("link"),
+        canUndo: currentEditor.can().undo(),
+        canRedo: currentEditor.can().redo(),
+        canLiftListItem: currentEditor.can().liftListItem("listItem"),
+        canSinkListItem: currentEditor.can().sinkListItem("listItem"),
+      };
+    },
+  });
+  const [fontSizeInput, setFontSizeInput] = useState<string | null>(null);
 
   const togglePopover = useCallback(
     (name: PopoverName) => {
@@ -106,21 +230,12 @@ function Toolbar({ editor }: ToolbarProps) {
 
   const closePopover = useCallback(() => setActivePopover(null), []);
 
-  const currentFontFamily =
-    (editor.getAttributes("textStyle").fontFamily as string) || "Arial";
-  const currentFontSizeRaw =
-    (editor.getAttributes("textStyle").fontSize as string) || "11pt";
-  const currentFontSize = parseInt(currentFontSizeRaw, 10);
-  const currentTextColor =
-    (editor.getAttributes("textStyle").color as string) || "#000000";
-  const currentHighlightColor =
-    (editor.getAttributes("highlight").color as string) || "#FFFF00";
-
-  const activeHeading = HEADING_OPTIONS.find(
-    (option) =>
-      option.level > 0 && editor.isActive("heading", { level: option.level })
-  );
-  const currentHeadingLabel = activeHeading?.label || "Normal text";
+  const currentHeadingLabel =
+    HEADING_OPTIONS.find(
+      (option) => option.level === toolbarState.activeHeadingLevel
+    )?.label || "Normal text";
+  const displayedFontSizeInput =
+    fontSizeInput ?? String(toolbarState.currentFontSize);
 
   const setFontSize = useCallback(
     (size: number) => {
@@ -131,35 +246,35 @@ function Toolbar({ editor }: ToolbarProps) {
 
   const adjustFontSize = useCallback(
     (direction: "up" | "down") => {
-      const currentIndex = FONT_SIZES.indexOf(currentFontSize);
-      if (direction === "up") {
-        const nextSize =
-          currentIndex === -1 || currentIndex >= FONT_SIZES.length - 1
-            ? FONT_SIZES[FONT_SIZES.length - 1]
-            : FONT_SIZES[currentIndex + 1];
-        setFontSize(nextSize);
-      } else {
-        const prevSize =
-          currentIndex === -1 || currentIndex <= 0
-            ? FONT_SIZES[0]
-            : FONT_SIZES[currentIndex - 1];
-        setFontSize(prevSize);
-      }
+      setFontSize(getAdjacentFontSize(toolbarState.currentFontSize, direction));
     },
-    [currentFontSize, setFontSize]
+    [setFontSize, toolbarState.currentFontSize]
   );
+
+  const applyFontSizeInput = useCallback(() => {
+    const value = parseInt(displayedFontSizeInput, 10);
+    if (Number.isFinite(value) && value > 0 && value <= 400) {
+      setFontSize(value);
+      setFontSizeInput(null);
+      return;
+    }
+
+    setFontSizeInput(null);
+    editor.commands.focus();
+  }, [displayedFontSizeInput, editor, setFontSize]);
 
   const handleFontSizeInput = useCallback(
     (event: React.KeyboardEvent<HTMLInputElement>) => {
       if (event.key === "Enter") {
-        const value = parseInt(event.currentTarget.value, 10);
-        if (value > 0 && value <= 400) {
-          setFontSize(value);
-        }
+        event.preventDefault();
+        applyFontSizeInput();
+      }
+      if (event.key === "Escape") {
+        setFontSizeInput(null);
         editor.commands.focus();
       }
     },
-    [editor, setFontSize]
+    [applyFontSizeInput, editor]
   );
 
   return (
@@ -180,14 +295,14 @@ function Toolbar({ editor }: ToolbarProps) {
         <ToolbarButton
           title="Undo"
           onClick={() => editor.chain().focus().undo().run()}
-          disabled={!editor.can().undo()}
+          disabled={!toolbarState.canUndo}
         >
           <Undo2 size={18} />
         </ToolbarButton>
         <ToolbarButton
           title="Redo"
           onClick={() => editor.chain().focus().redo().run()}
-          disabled={!editor.can().redo()}
+          disabled={!toolbarState.canRedo}
         >
           <Redo2 size={18} />
         </ToolbarButton>
@@ -218,7 +333,7 @@ function Toolbar({ editor }: ToolbarProps) {
                   key={option.level}
                   type="button"
                   className={`w-full text-left px-3 py-1.5 hover:bg-gray-100 cursor-pointer transition-colors ${
-                    currentHeadingLabel === option.label
+                    toolbarState.activeHeadingLevel === option.level
                       ? "bg-blue-50 text-blue-700"
                       : "text-gray-700"
                   }`}
@@ -243,7 +358,7 @@ function Toolbar({ editor }: ToolbarProps) {
                       editor
                         .chain()
                         .focus()
-                        .toggleHeading({
+                        .setHeading({
                           level: option.level as 1 | 2 | 3 | 4,
                         })
                         .run();
@@ -273,9 +388,9 @@ function Toolbar({ editor }: ToolbarProps) {
           >
             <span
               className="truncate"
-              style={{ fontFamily: currentFontFamily }}
+              style={{ fontFamily: toolbarState.currentFontFamily }}
             >
-              {currentFontFamily}
+              {toolbarState.currentFontFamily}
             </span>
             <ChevronDown size={14} />
           </button>
@@ -289,7 +404,7 @@ function Toolbar({ editor }: ToolbarProps) {
                   key={font}
                   type="button"
                   className={`w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 cursor-pointer transition-colors ${
-                    currentFontFamily === font
+                    toolbarState.currentFontFamily === font
                       ? "bg-blue-50 text-blue-700"
                       : "text-gray-700"
                   }`}
@@ -314,21 +429,27 @@ function Toolbar({ editor }: ToolbarProps) {
           <ToolbarButton
             title="Decrease font size"
             onClick={() => adjustFontSize("down")}
-            disabled={currentFontSize <= FONT_SIZES[0]}
+            disabled={toolbarState.currentFontSize <= FONT_SIZES[0]}
           >
             <Minus size={14} />
           </ToolbarButton>
           <input
             type="text"
-            value={currentFontSize}
+            title="Font size"
+            inputMode="numeric"
+            value={displayedFontSizeInput}
+            onChange={(event) => setFontSizeInput(event.target.value)}
             onKeyDown={handleFontSizeInput}
-            onChange={() => {}}
+            onBlur={applyFontSizeInput}
+            onFocus={(event) => event.currentTarget.select()}
             className="w-8 text-center text-sm border border-gray-300 rounded py-0.5 focus:outline-none focus:border-blue-400"
           />
           <ToolbarButton
             title="Increase font size"
             onClick={() => adjustFontSize("up")}
-            disabled={currentFontSize >= FONT_SIZES[FONT_SIZES.length - 1]}
+            disabled={
+              toolbarState.currentFontSize >= FONT_SIZES[FONT_SIZES.length - 1]
+            }
           >
             <Plus size={14} />
           </ToolbarButton>
@@ -340,21 +461,21 @@ function Toolbar({ editor }: ToolbarProps) {
         <ToolbarButton
           title="Bold"
           onClick={() => editor.chain().focus().toggleBold().run()}
-          isActive={editor.isActive("bold")}
+          isActive={toolbarState.isBoldActive}
         >
           <Bold size={18} />
         </ToolbarButton>
         <ToolbarButton
           title="Italic"
           onClick={() => editor.chain().focus().toggleItalic().run()}
-          isActive={editor.isActive("italic")}
+          isActive={toolbarState.isItalicActive}
         >
           <Italic size={18} />
         </ToolbarButton>
         <ToolbarButton
           title="Underline"
           onClick={() => editor.chain().focus().toggleUnderline().run()}
-          isActive={editor.isActive("underline")}
+          isActive={toolbarState.isUnderlineActive}
         >
           <Underline size={18} />
         </ToolbarButton>
@@ -366,18 +487,19 @@ function Toolbar({ editor }: ToolbarProps) {
           <ToolbarButton
             title="Text color"
             onClick={() => togglePopover("textColor")}
+            isActive={toolbarState.isTextColorActive}
           >
             <div className="flex flex-col items-center">
               <Baseline size={18} />
               <div
                 className="w-4 h-1 rounded-sm mt-px"
-                style={{ backgroundColor: currentTextColor }}
+                style={{ backgroundColor: toolbarState.currentTextColor }}
               />
             </div>
           </ToolbarButton>
           {activePopover === "textColor" && (
             <ColorPicker
-              currentColor={currentTextColor}
+              currentColor={toolbarState.currentTextColor}
               onSelectColor={(color) =>
                 editor.chain().focus().setColor(color).run()
               }
@@ -391,20 +513,21 @@ function Toolbar({ editor }: ToolbarProps) {
           <ToolbarButton
             title="Highlight color"
             onClick={() => togglePopover("highlightColor")}
+            isActive={toolbarState.isHighlightActive}
           >
             <div className="flex flex-col items-center">
               <Highlighter size={18} />
               <div
                 className="w-4 h-1 rounded-sm mt-px"
-                style={{ backgroundColor: currentHighlightColor }}
+                style={{ backgroundColor: toolbarState.currentHighlightColor }}
               />
             </div>
           </ToolbarButton>
           {activePopover === "highlightColor" && (
             <ColorPicker
-              currentColor={currentHighlightColor}
+              currentColor={toolbarState.currentHighlightColor}
               onSelectColor={(color) =>
-                editor.chain().focus().toggleHighlight({ color }).run()
+                editor.chain().focus().setHighlight({ color }).run()
               }
               onClose={closePopover}
             />
@@ -417,28 +540,28 @@ function Toolbar({ editor }: ToolbarProps) {
         <ToolbarButton
           title="Align left"
           onClick={() => editor.chain().focus().setTextAlign("left").run()}
-          isActive={editor.isActive({ textAlign: "left" })}
+          isActive={toolbarState.currentTextAlign === "left"}
         >
           <AlignLeft size={18} />
         </ToolbarButton>
         <ToolbarButton
           title="Align center"
           onClick={() => editor.chain().focus().setTextAlign("center").run()}
-          isActive={editor.isActive({ textAlign: "center" })}
+          isActive={toolbarState.currentTextAlign === "center"}
         >
           <AlignCenter size={18} />
         </ToolbarButton>
         <ToolbarButton
           title="Align right"
           onClick={() => editor.chain().focus().setTextAlign("right").run()}
-          isActive={editor.isActive({ textAlign: "right" })}
+          isActive={toolbarState.currentTextAlign === "right"}
         >
           <AlignRight size={18} />
         </ToolbarButton>
         <ToolbarButton
           title="Justify"
           onClick={() => editor.chain().focus().setTextAlign("justify").run()}
-          isActive={editor.isActive({ textAlign: "justify" })}
+          isActive={toolbarState.currentTextAlign === "justify"}
         >
           <AlignJustify size={18} />
         </ToolbarButton>
@@ -449,14 +572,14 @@ function Toolbar({ editor }: ToolbarProps) {
         <ToolbarButton
           title="Bulleted list"
           onClick={() => editor.chain().focus().toggleBulletList().run()}
-          isActive={editor.isActive("bulletList")}
+          isActive={toolbarState.isBulletListActive}
         >
           <List size={18} />
         </ToolbarButton>
         <ToolbarButton
           title="Numbered list"
           onClick={() => editor.chain().focus().toggleOrderedList().run()}
-          isActive={editor.isActive("orderedList")}
+          isActive={toolbarState.isOrderedListActive}
         >
           <ListOrdered size={18} />
         </ToolbarButton>
@@ -465,14 +588,14 @@ function Toolbar({ editor }: ToolbarProps) {
         <ToolbarButton
           title="Decrease indent"
           onClick={() => editor.chain().focus().liftListItem("listItem").run()}
-          disabled={!editor.can().liftListItem("listItem")}
+          disabled={!toolbarState.canLiftListItem}
         >
           <Outdent size={18} />
         </ToolbarButton>
         <ToolbarButton
           title="Increase indent"
           onClick={() => editor.chain().focus().sinkListItem("listItem").run()}
-          disabled={!editor.can().sinkListItem("listItem")}
+          disabled={!toolbarState.canSinkListItem}
         >
           <Indent size={18} />
         </ToolbarButton>
@@ -484,7 +607,7 @@ function Toolbar({ editor }: ToolbarProps) {
           <ToolbarButton
             title="Insert link"
             onClick={() => togglePopover("link")}
-            isActive={editor.isActive("link")}
+            isActive={toolbarState.isLinkActive}
           >
             <Link size={18} />
           </ToolbarButton>

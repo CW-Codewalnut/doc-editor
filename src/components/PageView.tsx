@@ -21,7 +21,7 @@ interface PageViewProps {
 }
 
 /**
- * Finds the .tiptap element inside the content ref and adds margin-bottom
+ * Finds the .tiptap element inside the content ref and adds margin-top
  * to block elements that would straddle a page boundary, pushing them to
  * the next page. Returns the total number of pages.
  */
@@ -35,7 +35,7 @@ function adjustBlockMarginsForPageBreaks(contentElement: HTMLElement): number {
   // First pass: clear all previously injected margins
   for (const block of blockChildren) {
     if (block.dataset.pageMargin) {
-      block.style.marginBottom = "";
+      block.style.marginTop = "";
       delete block.dataset.pageMargin;
     }
   }

@@ -19,6 +19,8 @@ function ColorPicker({ currentColor, onSelectColor, onClose }: ColorPickerProps)
               <button
                 key={color}
                 type="button"
+                title={color}
+                aria-label={`Select ${color}`}
                 style={{
                   backgroundColor: color,
                   width: 20,
