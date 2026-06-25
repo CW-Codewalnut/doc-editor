@@ -1,0 +1,85 @@
+/*
+ * Document-content styling for generated TipTap content.
+ * Shared by the live editor (via index.css) and the self-contained HTML
+ * export (imported as a raw string) so exported files render consistently
+ * outside the app.
+ */
+
+.tiptap {
+  display: flow-root;
+  font-family: Arial, sans-serif;
+  font-size: 11pt;
+  line-height: 1.5;
+  color: #000;
+}
+
+.tiptap > :first-child {
+  margin-top: 0;
+}
+
+.tiptap h1,
+.tiptap h2,
+.tiptap h3,
+.tiptap h4 {
+  color: #202124;
+  font-weight: 700;
+  line-height: 1.25;
+  margin: 0.85em 0 0.35em;
+}
+
+.tiptap h1 {
+  font-size: 22pt;
+}
+
+.tiptap h2 {
+  font-size: 18pt;
+}
+
+.tiptap h3 {
+  font-size: 15pt;
+}
+
+.tiptap h4 {
+  font-size: 13pt;
+}
+
+.tiptap ul {
+  list-style-type: disc;
+  padding-left: 1.5em;
+  margin: 0.5em 0;
+}
+
+.tiptap ol {
+  list-style-type: decimal;
+  padding-left: 1.5em;
+  margin: 0.5em 0;
+}
+
+.tiptap ul ul {
+  list-style-type: circle;
+}
+
+.tiptap ul ul ul {
+  list-style-type: square;
+}
+
+.tiptap li {
+  margin: 0.2em 0;
+}
+
+.tiptap a {
+  color: #1a73e8;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.tiptap img {
+  max-width: 100%;
+  height: auto;
+}
+
+.tiptap hr {
+  border: none;
+  border-top: 1px solid #dadce0;
+  margin: 1em 0;
+}

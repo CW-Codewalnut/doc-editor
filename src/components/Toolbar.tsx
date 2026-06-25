@@ -22,10 +22,12 @@ import {
   Link,
   ImageIcon,
   MinusIcon,
+  Download,
 } from "lucide-react";
 import ColorPicker from "./ColorPicker";
 import LinkPopover from "./LinkPopover";
 import ImagePopover from "./ImagePopover";
+import ExportMenu from "./ExportMenu";
 
 const FONT_FAMILIES = [
   "Arial",
@@ -59,6 +61,7 @@ type PopoverName =
   | "highlightColor"
   | "link"
   | "image"
+  | "export"
   | null;
 
 type HeadingLevel = 0 | 1 | 2 | 3 | 4;
@@ -642,6 +645,23 @@ function Toolbar({ editor }: ToolbarProps) {
         >
           <MinusIcon size={18} />
         </ToolbarButton>
+
+        {/* Export */}
+        <div className="relative ml-auto">
+          <ToolbarButton
+            title="Export document"
+            onClick={() => togglePopover("export")}
+            isActive={activePopover === "export"}
+          >
+            <Download size={18} />
+          </ToolbarButton>
+          {activePopover === "export" && (
+            <ExportMenu
+              editor={editor}
+              onClose={closePopover}
+            />
+          )}
+        </div>
       </div>
     </>
   );
