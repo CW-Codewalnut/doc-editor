@@ -137,10 +137,50 @@ export async function exportToPdf(editor: Editor): Promise<void> {
   }
 }
 
+/** Reads a fetched image blob into a `data:` URI so it can be embedded inline. */
+function blobToDataUri(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+}
+
+/**
+ * Replaces remote `<img src="http(s)://…">` references with inline `data:` URIs
+ * so the exported HTML stays self-contained offline. Best effort: hosts that do
+ * not allow cross-origin reads (CORS) cannot be inlined from the browser, so
+ * those images keep their original remote URL rather than failing the export.
+ * Already-inline `data:` images (the editor's upload flow) are left untouched.
+ */
+async function inlineRemoteImages(container: HTMLElement): Promise<void> {
+  const remoteImages = Array.from(container.querySelectorAll("img")).filter(
+    (image) => /^https?:/i.test(image.getAttribute("src") || "")
+  );
+
+  await Promise.all(
+    remoteImages.map(async (image) => {
+      try {
+        const response = await fetch(image.src);
+        if (!response.ok) return;
+        image.setAttribute("src", await blobToDataUri(await response.blob()));
+      } catch {
+        // Leave the remote URL in place when the image cannot be read.
+      }
+    })
+  );
+}
+
 /** Exports the current document as a self-contained HTML file. */
-export function exportToHtml(editor: Editor): void {
+export async function exportToHtml(editor: Editor): Promise<void> {
   const baseName = getDocumentBaseName(editor);
-  const html = buildStandaloneHtml(baseName, editor.getHTML());
+
+  const body = document.createElement("div");
+  body.innerHTML = editor.getHTML();
+  await inlineRemoteImages(body);
+
+  const html = buildStandaloneHtml(baseName, body.innerHTML);
   triggerDownload(new Blob([html], { type: "text/html;charset=utf-8" }), `${baseName}.html`);
 }
 

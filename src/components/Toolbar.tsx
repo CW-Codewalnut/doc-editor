@@ -22,12 +22,12 @@ import {
   Link,
   ImageIcon,
   MinusIcon,
-  Download,
 } from "lucide-react";
 import ColorPicker from "./ColorPicker";
 import LinkPopover from "./LinkPopover";
 import ImagePopover from "./ImagePopover";
-import ExportMenu from "./ExportMenu";
+import ToolbarButton from "./ToolbarButton";
+import ExportControl from "./ExportControl";
 
 const FONT_FAMILIES = [
   "Arial",
@@ -69,37 +69,6 @@ type NonParagraphHeadingLevel = Exclude<HeadingLevel, 0>;
 
 interface ToolbarProps {
   editor: Editor;
-}
-
-function ToolbarButton({
-  onClick,
-  isActive = false,
-  disabled = false,
-  title,
-  children,
-}: {
-  onClick: () => void;
-  isActive?: boolean;
-  disabled?: boolean;
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      title={title}
-      disabled={disabled}
-      // Preserve editor focus/selection on mouse press, but activate on click so
-      // keyboard users (Enter/Space fire a click on a focused button) can use it.
-      onMouseDown={(event) => event.preventDefault()}
-      onClick={onClick}
-      className={`p-1.5 rounded hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors ${
-        isActive ? "bg-blue-100 text-blue-700" : "text-gray-700"
-      }`}
-    >
-      {children}
-    </button>
-  );
 }
 
 function ToolbarDivider() {
@@ -647,21 +616,12 @@ function Toolbar({ editor }: ToolbarProps) {
         </ToolbarButton>
 
         {/* Export */}
-        <div className="relative ml-auto">
-          <ToolbarButton
-            title="Export document"
-            onClick={() => togglePopover("export")}
-            isActive={activePopover === "export"}
-          >
-            <Download size={18} />
-          </ToolbarButton>
-          {activePopover === "export" && (
-            <ExportMenu
-              editor={editor}
-              onClose={closePopover}
-            />
-          )}
-        </div>
+        <ExportControl
+          editor={editor}
+          isOpen={activePopover === "export"}
+          onToggle={() => togglePopover("export")}
+          onClose={closePopover}
+        />
       </div>
     </>
   );
