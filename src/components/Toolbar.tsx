@@ -89,10 +89,10 @@ function ToolbarButton({
       type="button"
       title={title}
       disabled={disabled}
-      onMouseDown={(event) => {
-        event.preventDefault();
-        onClick();
-      }}
+      // Preserve editor focus/selection on mouse press, but activate on click so
+      // keyboard users (Enter/Space fire a click on a focused button) can use it.
+      onMouseDown={(event) => event.preventDefault()}
+      onClick={onClick}
       className={`p-1.5 rounded hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors ${
         isActive ? "bg-blue-100 text-blue-700" : "text-gray-700"
       }`}
