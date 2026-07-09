@@ -26,6 +26,8 @@ import {
 import ColorPicker from "./ColorPicker";
 import LinkPopover from "./LinkPopover";
 import ImagePopover from "./ImagePopover";
+import ToolbarButton from "./ToolbarButton";
+import ExportControl from "./ExportControl";
 
 const FONT_FAMILIES = [
   "Arial",
@@ -59,6 +61,7 @@ type PopoverName =
   | "highlightColor"
   | "link"
   | "image"
+  | "export"
   | null;
 
 type HeadingLevel = 0 | 1 | 2 | 3 | 4;
@@ -66,37 +69,6 @@ type NonParagraphHeadingLevel = Exclude<HeadingLevel, 0>;
 
 interface ToolbarProps {
   editor: Editor;
-}
-
-function ToolbarButton({
-  onClick,
-  isActive = false,
-  disabled = false,
-  title,
-  children,
-}: {
-  onClick: () => void;
-  isActive?: boolean;
-  disabled?: boolean;
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      title={title}
-      disabled={disabled}
-      onMouseDown={(event) => {
-        event.preventDefault();
-        onClick();
-      }}
-      className={`p-1.5 rounded hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors ${
-        isActive ? "bg-blue-100 text-blue-700" : "text-gray-700"
-      }`}
-    >
-      {children}
-    </button>
-  );
 }
 
 function ToolbarDivider() {
@@ -642,6 +614,14 @@ function Toolbar({ editor }: ToolbarProps) {
         >
           <MinusIcon size={18} />
         </ToolbarButton>
+
+        {/* Export */}
+        <ExportControl
+          editor={editor}
+          isOpen={activePopover === "export"}
+          onToggle={() => togglePopover("export")}
+          onClose={closePopover}
+        />
       </div>
     </>
   );
